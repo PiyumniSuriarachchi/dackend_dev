@@ -3,6 +3,8 @@ import os
 import csv
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+from pymongo import MongoClient
+from pymongo.errors import ServerSelectionTimeoutError
 from functions.translations import translate_text
 from functions.summarize import summarize_text
 from functions.quizGeneration import process_pdf
@@ -11,6 +13,21 @@ from functions.QuestionAnswering import answer_question
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing
+
+# Retrieve MongoDB URL from environment variables
+mongo_url = os.getenv('MONGO_URL')
+if not mongo_url:
+    raise EnvironmentError("MONGO_URL not found in environment variables.")
+
+try:
+    client = MongoClient(mongo_url, serverSelectionTimeoutMS=5000)
+    client.server_info()  # Attempt to connect and force a server call
+    db = client.get_default_database()  # Get the default database
+    print("database connected")
+    app.logger.info("Successfully connected to MongoDB")
+except ServerSelectionTimeoutError as e:
+    app.logger.error("Database connection failed.", exc_info=True)
+    raise e
 
 
 # Define upload folder
